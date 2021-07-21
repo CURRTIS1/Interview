@@ -1,0 +1,4 @@
+*.secret.tf
+.terraform/
+*.DS_Store
+private.md
