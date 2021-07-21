@@ -44,7 +44,7 @@ data "aws_availability_zones" "available" {
 ## SSM IAM role
 
 resource "aws_iam_role" "ssm_role" {
-  name = "ssm_role"
+  name               = "ssm_role"
   assume_role_policy = <<EOF
     {
       "Version": "2012-10-17",
