@@ -82,3 +82,9 @@ variable "elb_protocol" {
   type        = string
   default     = "HTTP"
 }
+
+variable "target_type" {
+  description = "Target type for the TG"
+  type        = string
+  default     = "instance"
+}

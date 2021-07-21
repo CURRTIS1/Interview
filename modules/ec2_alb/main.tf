@@ -32,10 +32,11 @@ locals {
 ## ELB Target Group
 
 resource "aws_lb_target_group" "elb_target_group" {
-  name     = var.tg_name
-  port     = var.tg_port
-  protocol = var.tg_protocol
-  vpc_id   = var.vpc_id
+  name        = var.tg_name
+  port        = var.tg_port
+  protocol    = var.tg_protocol
+  vpc_id      = var.vpc_id
+  target_type = var.target_type
   health_check {
     enabled  = true
     path     = "/"
