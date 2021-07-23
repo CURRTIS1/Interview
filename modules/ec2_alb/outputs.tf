@@ -11,3 +11,8 @@ output "elb" {
   value       = aws_lb.myelb.id
   description = "Id of the ALB"
 }
+
+output "elb_dns" {
+  value       = aws_lb.myelb.dns_name
+  description = "DNS of the ALB"
+}
