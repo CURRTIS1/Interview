@@ -2,7 +2,7 @@
  * # 000base - terraform.tfvars
  */
 
-region      = "us-east-1"
+region      = "eu-west-1"
 environment = "dev"
 layer       = "000base"
 

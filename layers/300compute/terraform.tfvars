@@ -2,7 +2,7 @@
  * # 300compute - terraform.tfvars
  */
 
-region      = "us-east-1"
+region      = "eu-west-1"
 environment = "dev"
 layer       = "300container"
 tg_name     = "my-tg"
