@@ -45,6 +45,7 @@ data "aws_availability_zones" "available" {
 
 resource "aws_iam_role" "ssm_role" {
   name               = "ssm_role"
+  permissions_boundary = "arn:aws:iam::615196324256:policy/dog-policy-policy-boundary"
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
