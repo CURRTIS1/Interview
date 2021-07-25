@@ -82,4 +82,7 @@ resource "aws_lb_listener" "myelblistener" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.elb_target_group.arn
   }
+  depends_on = [
+    aws_lb_target_group.elb_target_group
+  ]
 }
