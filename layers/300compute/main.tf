@@ -65,6 +65,7 @@ resource "aws_ecr_repository" "my_ecr_repo" {
 
 resource "aws_iam_role" "codebuild_role" {
   name               = "codebuild_role"
+  permissions_boundary = "arn:aws:iam::615196324256:policy/dog-policy-policy-boundary"
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -253,6 +254,7 @@ resource "aws_ecs_cluster" "Curtis-int" {
 
 resource "aws_iam_role" "ecs_role" {
   name               = "ecs_role"
+  permissions_boundary = "arn:aws:iam::615196324256:policy/dog-policy-policy-boundary"
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -367,7 +369,7 @@ resource "aws_ecs_service" "myecssvc" {
     container_port   = 80
   }
   depends_on = [
-    module.ec2_alb.elb_target_group
+    module.ec2_alb.elb
   ]
 }
 
@@ -383,7 +385,6 @@ resource "aws_route53_health_check" "alb_check" {
   failure_threshold = "5"
   request_interval = "30"
   regions           = ["eu-west-1", "us-east-1", "us-west-1"]
-  #cloudwatch_alarm_name = aws_cloudwatch_metric_alarm.alb_check.id
 }
 
 resource "aws_sns_topic" "alb_topic" {
@@ -409,7 +410,7 @@ resource "aws_cloudwatch_metric_alarm" "alb_check" {
   alarm_actions = [aws_sns_topic.alb_topic.id]
   ok_actions = [aws_sns_topic.alb_topic.id]
   dimensions = {
-    HealthCheckId = "${aws_route53_health_check.alb_check.id}"
+    HealthCheckId = aws_route53_health_check.alb_check.id
   }
 }
 
@@ -419,4 +420,136 @@ resource "aws_cloudwatch_metric_alarm" "alb_check" {
 resource "aws_codecommit_repository" "Curtis-int" {
   repository_name = "Curtis-int-Repo"
   description     = "This is the Repository for Curtis Interview"
+}
+
+resource "aws_s3_bucket" "codebuild_bucket" {
+  versioning {
+    enabled = true
+  }
+}
+
+
+## ----------------------------------
+## S3 bucket
+
+resource "null_resource" "my_resource" {
+  triggers = {
+    always_run = "${timestamp()}"
+  }
+  provisioner "local-exec" {
+    command = "aws s3 sync ${path.module}/app s3://${aws_s3_bucket.codebuild_bucket.id}"
+    environment = {
+      AWS_ACCESS_KEY_ID     = var.aws_access_key
+      AWS_SECRET_ACCESS_KEY = var.aws_secret_key
+    }
+  }
+}
+
+
+## ----------------------------------
+## Codepipeline
+
+resource "aws_iam_role" "codepipeline_role" {
+  name = "codepipeline_role"
+  permissions_boundary = "arn:aws:iam::615196324256:policy/dog-policy-policy-boundary"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "codepipeline.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_policy" "codepipeline_policy" {
+  name = "codepipeline_policy"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect":"Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:GetObjectVersion",
+        "s3:GetBucketVersioning",
+        "s3:PutObjectAcl",
+        "s3:PutObject"
+      ],
+      "Resource": [
+        "${aws_s3_bucket.codebuild_bucket.arn}",
+        "${aws_s3_bucket.codebuild_bucket.arn}/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "codebuild:BatchGetBuilds",
+        "codebuild:StartBuild"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy_attachment" "codepipeline_role_attach" {
+  role       = aws_iam_role.codepipeline_role.name
+  policy_arn = aws_iam_policy.codepipeline_policy.arn
+}
+
+resource "aws_codepipeline" "mycodepipeline" {
+  name     = "Curtis-Interview"
+  role_arn = aws_iam_role.codepipeline_role.arn
+  artifact_store {
+    location = aws_s3_bucket.codebuild_bucket.id
+    type     = "S3"
+  }
+
+  stage {
+    name = "Source"
+
+    action {
+      name             = "Source"
+      category         = "Source"
+      owner            = "AWS"
+      provider         = "S3"
+      version          = "1"
+      output_artifacts = ["source_output"]
+
+      configuration = {
+        S3Bucket = "${aws_s3_bucket.codebuild_bucket.id}"
+        S3ObjectKey = "InterviewApp.zip"
+        PollForSourceChanges = true
+      }
+    }
+  }
+
+  stage {
+    name = "Build"
+
+    action {
+      name             = "Build"
+      category         = "Build"
+      owner            = "AWS"
+      provider         = "CodeBuild"
+      input_artifacts  = ["source_output"]
+      output_artifacts = ["build_output"]
+      version          = "1"
+
+      configuration = {
+        ProjectName = "${aws_codebuild_project.mycodebuildproject.arn}"
+      }
+    }
+  }
 }
