@@ -11,9 +11,9 @@ Terraform
 ECS Fargate cluster behind an ALB
 Fargate benefits from being a managed service and cheaper than ECS on EC2
 
-# Revision control
-## Github
+# Revision control - Github
 Terraform repo - https://github.com/CURRTIS1/Interview
+
 Python app repo - https://github.com/CURRTIS1/Interviewapp
 
 # Continuous integration / deployment
