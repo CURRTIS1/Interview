@@ -49,6 +49,10 @@ resource "aws_lb_target_group" "elb_target_group" {
       "Name" = var.tg_name
     }
   )
+
+  depends_on = [
+    aws_lb.myelb
+  ]
 }
 
 
