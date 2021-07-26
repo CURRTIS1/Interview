@@ -19,6 +19,14 @@ provider "aws" {
   secret_key = var.aws_secret_key
 }
 
+provider "aws" {
+  alias  = "east"
+  version    = "~> 3.3.0"
+  region     = "us-east-1"
+  access_key = var.aws_access_key
+  secret_key = var.aws_secret_key
+}
+
 locals {
   tags = {
     environment = var.environment
@@ -387,17 +395,20 @@ resource "aws_route53_health_check" "alb_check" {
   regions           = ["eu-west-1", "us-east-1", "us-west-1"]
 }
 
-resource "aws_sns_topic" "alb_topic" {
+resource "aws_sns_topic" "alb_topic_east" {
+  provider = aws.east
   name = "My-alb-check"
 }
 
 resource "aws_sns_topic_subscription" "my_alb_sub" {
-  topic_arn = aws_sns_topic.alb_topic.arn
+  provider = aws.east
+  topic_arn = aws_sns_topic.alb_topic_east.arn
   protocol = "sms"
   endpoint = "+447801455201"
 }
 
 resource "aws_cloudwatch_metric_alarm" "alb_check" {
+  provider = aws.east
   alarm_name = "alb_check"
   metric_name = "HealthCheckPercentageHealthy"
   statistic           = "Average"
@@ -407,8 +418,8 @@ resource "aws_cloudwatch_metric_alarm" "alb_check" {
   comparison_operator = "LessThanOrEqualToThreshold"
   namespace = "AWS/Route53"
   actions_enabled = "true"
-  alarm_actions = [aws_sns_topic.alb_topic.id]
-  ok_actions = [aws_sns_topic.alb_topic.id]
+  alarm_actions = [aws_sns_topic.alb_topic_east.id]
+  ok_actions = [aws_sns_topic.alb_topic_east.id]
   dimensions = {
     HealthCheckId = aws_route53_health_check.alb_check.id
   }
